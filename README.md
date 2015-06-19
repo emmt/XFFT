@@ -133,7 +133,7 @@ For instance, the default configuration settings correspond to:
       --with-fftw2-threads=yes \
       --fftw2-threads-cflags="" \
 	  --fftw2-threads-ldflags="" \
-      --fftw2-threads-deplibs="-lrfftw_threads -lfftw_threads -lrfftw -lfftw -lpthread"
+      --fftw2-threads-deplibs="-lrfftw_threads -lfftw_threads -lrfftw -lfftw -lpthread" \
       --with-fftw3=yes \
       --fftw3-cflags="" \
       --fftw3-ldflags="" \
