@@ -196,7 +196,7 @@ install:
 #distclean: clean-here
 #	rm -rf fftw2 fftw3
 
-DISTRIB_FILES = Makefile AUTHORS LICENSE README NEWS FAQ.txt \
+DISTRIB_FILES = Makefile AUTHORS LICENSE.md README NEWS FAQ.txt \
                 xfft.c xfft.i xfft_generic.i xfft_generic.mkf
 
 bump-version:

@@ -5,37 +5,22 @@
  *
  *-----------------------------------------------------------------------------
  *
- * Copyright (C) 2009-2011 Éric Thiébaut <thiebaut@obs.univ-lyon1.fr>
+ * Copyright (C) 2009-2015: Éric Thiébaut <eric.thiebaut@univ-lyon1.fr>
  *
- * This software is governed by the CeCILL-C license under French law and
- * abiding by the rules of distribution of free software.  You can use, modify
- * and/or redistribute the software under the terms of the CeCILL-C license as
- * circulated by CEA, CNRS and INRIA at the following URL
- * "http://www.cecill.info".
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * As a counterpart to the access to the source code and rights to copy,
- * modify and redistribute granted by the license, users are provided only
- * with a limited warranty and the software's author, the holder of the
- * economic rights, and the successive licensors have only limited liability.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  *
- * In this respect, the user's attention is drawn to the risks associated with
- * loading, using, modifying and/or developing or reproducing the software by
- * the user in light of its specific status of free software, that may mean
- * that it is complicated to manipulate, and that also therefore means that it
- * is reserved for developers and experienced professionals having in-depth
- * computer knowledge. Users are therefore encouraged to load and test the
- * software's suitability as regards their requirements in conditions enabling
- * the security of their systems and/or data to be ensured and, more
- * generally, to use and operate it in the same conditions as regards
- * security.
- *
- * The fact that you are presently reading this means that you have had
- * knowledge of the CeCILL-C license and that you accept its terms.
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *-----------------------------------------------------------------------------
- *
- * $Id$
- * $Log$
  */
 
 local XFFT_DIRECT, XFFT_FORWARD, XFFT_CONJUGATE_TRANSPOSE, XFFT_BACKWARD;
@@ -49,7 +34,7 @@ local xfft_new;
 
        z = op(a, job); // compute the FFT of A
        op, a, job;     // compute in-place FFT
-     
+
      where optional argument JOB is:
 
        0 or XFFT_DIRECT or XFFT_FORWARD, for the direct transform;
@@ -80,7 +65,7 @@ local xfft_new;
      for a real-complex transform, RDIMS and DIMS are identical but the first
      dimension of ZDIMS may be different: ZDIMS(2) = DIMS(2)/2 + 1, other
      dimensions are identical.
-     
+
      Keyword DIMS can be used to preset the dimension list of the
      transform. By default, the dimension list is obtained the first time the
      operator is used.  However for a real-complex transform, if the first
@@ -89,18 +74,18 @@ local xfft_new;
 
      Keyword REAL must be set true to create an operator for real-complex
      transforms.
-     
+
      Keyword NTHREADS can be set to specify the number of threads to use.  If
      multi-threading is not supported --- you can check this with
      xfft_threads() --- the number of threads will always be 1 whatever the
      value of the NTHREADS keyword.
-     
+
      Keyword ALIGN can be set true to apply FFT on aligned memory.  This
      involves using workspaces specially allocated to be properly aligned and,
      hence, some overheads to copy the values between Yorick arrays and these
      workspaces.  If using aligned memory is not supported by the FFT
      implementation, the value of ALIGN keyword is ignored.
-     
+
      Keyword PLANNING can be set to specify the strategy to build the plan
      when FFTW is used to compute the transform.  The possible planning values
      are: XFFT_ESTIMATE (default), XFFT_MEASURE, XFFT_PATIENT, or
@@ -174,7 +159,7 @@ local xfft_indgen;
      argument HALF is true, only returns the first half range corresponding to
      the positive frequencies (same as indgen(0:LEN/2)).  This is to deal with
      the first dimension of real to complex transforms.
-     
+
    SEE ALSO xfft_best_dim, xfft_new. */
 
 local xfft_version;
@@ -222,12 +207,12 @@ local xfft_forget_wisdom;
 
 func xfft_try_load(name)
 /* DOCUMENT xfft_try_load(name);
-         
+
      The function xfft_try_load() attempts to load a Yorick plug-in catching
      errors.  Return 0 on success, -1 on failure.  Argument NAME is the name
      of the plug-in, it may have directory separators '/' to force setting
      (temporarily) the plug-in directory.
-     
+
    SEE ALSO: plug_in, plug_dir, catch. */
 {
   index = strfind("/", name, back=1n)(2);
@@ -276,7 +261,7 @@ if (is_func(xfft_new) != 2 &&
  * tab-width: 8
  * c-basic-offset: 2
  * indent-tabs-mode: nil
- * fill-column: 78
+ * fill-column: 79
  * coding: utf-8
  * End:
  */
