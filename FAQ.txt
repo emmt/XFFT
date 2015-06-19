@@ -1,0 +1,19 @@
+Q. I've got this error message:
+
+  "cannot guess real-complex dimension list from backward transform"
+
+A. For the real-complex transform, the complex array is Hermitian and
+   (approximately) half the size of the real array.  More precisely the first
+   dimension of the complex array is N1/2 + 1, with N1 the first dimension of
+   the real array (other dimensions remain the same).  Hence N1 cannot be
+   guessed form the dimension list of the complex array.  This can be solved
+   in two ways: (1) the first time the FFTW object is used to compute a
+   forward (that is real to complex) transform so that it can safely guess all
+   the dimensions; (2) setup the dimension list when the FFTW object is
+   created, for instance:
+
+       f = fftw_new(dims=[2, 128, 512], real=1)
+
+   for an FTTW operator for real-complex transforms of 2-D 128 by 512 real
+   arrays.  Note that in this case, the complex arrays will be 65 by 512
+   complex arrays.

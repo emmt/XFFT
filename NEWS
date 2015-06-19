@@ -1,0 +1,14 @@
+ * [2013/05/14] version 0.0.4 released.
+   - make "unsigned char" the default C type for Yorick "char" (unless
+     macro YORICK_CHAR_IS_SIGNED is defined);
+
+ * [2012/09/18] version 0.0.3 released.
+   - fixed a bug due to improperly detecting scratch arrays;
+   - fixed trailing space in version number in Makefile;
+
+ * [2012/06/12] version 0.0.2 released.
+   - fixed installation of xfft.i;
+   - added preprocessor directives in xfft.c to avoid compilation warnings;
+   - fixed text in error messages;
+
+ * [2011/11/25] version 0.0.1 released.
