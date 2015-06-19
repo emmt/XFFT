@@ -1,3 +1,10 @@
+ * [2015/06/19] version 0.1.0 released.
+   - add pseudo-configure script;
+   - plug-in can now be compiled from a remote build directory;
+   - add autoload file;
+   - change to GNU-GPL license;
+   - XFFT is now hosted by GitHub (https://github.com/emmt/XFFT);
+
  * [2013/05/14] version 0.0.4 released.
    - make "unsigned char" the default C type for Yorick "char" (unless
      macro YORICK_CHAR_IS_SIGNED is defined);
