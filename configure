@@ -1,0 +1,407 @@
+#! /bin/sh
+#
+# Configuration script for a Yorick plugin.
+#
+#------------------------------------------------------------------------------
+#
+# Copyright (C) 2015: Éric Thiébaut <eric.thiebaut@univ-lyon1.fr>
+#
+#------------------------------------------------------------------------------
+
+# The following default values are specific to the package.  They can be
+# overwritten by options on the command line.
+cfg_cflags=
+cfg_deplibs=
+cfg_ldflags=
+
+# Flags for FFTW2.
+cfg_with_fftw2="yes"
+cfg_fftw2_cflags=""
+cfg_fftw2_ldflags=""
+cfg_fftw2_deplibs="-lrfftw -lfftw"
+
+# Similarly for FFTW2 with threads.
+cfg_with_fftw2_threads="yes"
+cfg_fftw2_threads_cflags=""
+cfg_fftw2_threads_ldflags=""
+cfg_fftw2_threads_deplibs="-lrfftw_threads -lfftw_threads -lrfftw -lfftw -lpthread"
+
+# Similarly for FFTW3.
+cfg_with_fftw3="yes"
+cfg_fftw3_cflags=""
+cfg_fftw3_ldflags=""
+cfg_fftw3_deplibs="-lfftw3"
+
+# Similarly for FFTW3 with threads.
+cfg_with_fftw3_threads="yes"
+cfg_fftw3_threads_cflags=""
+cfg_fftw3_threads_ldflags=""
+cfg_fftw3_threads_deplibs="-lfftw3_threads -lfftw3 -lpthread"
+
+# Similarly for CFFT:
+cfg_with_cfft="no"
+cfg_cfft_cflags=
+cfg_cfft_ldflags=
+cfg_cfft_deplibs=
+
+# The other values are pretty general.
+cfg_tmpdir=.
+cfg_tmpfile="$cfg_tmpdir/cfg-$$"
+cfg_debug=no
+
+cfg_on_exit () {
+    if test "$cfg_debug" = "no"; then
+        rm -f "$cfg_tmpfile" "$cfg_tmpfile.i"
+    fi
+}
+
+trap cfg_on_exit 0
+
+cfg_progname=$0
+cfg_srcdir=$(dirname "$0")
+#cfg_path=$(readlink -fn "$@")
+#cfg_srcdir=$(dirname "$cfg_path")
+
+cfg_die () { echo >&2 "$cfg_progname: $*"; exit 1; }
+
+cfg_opt_value () { echo "$*" | sed -e 's/^--[^=]*=//'; }
+
+cfg_opt_yes_or_no () {
+    local value
+    value=$(echo "$*" | sed -e 's/^--[^=]*=//')
+    if test "$value" = "yes" -o  "$value" = "no"; then
+        echo $value
+    fi
+}
+
+cfg_despace () { echo "$*" | sed -e 's/ /\\ /g'; }
+
+cfg_add_rule () {
+    local s t
+    s=$*
+    for t in "/" "%" "@" "," "-"; do
+        case "$s" in
+            *$t* )
+                ;;
+            * )
+                break
+        esac
+    done
+    if test "$t" = "-"; then
+        cfg_die "No valid separator found"
+    fi
+    s='[ 	]*'
+    s="s${t}^${s}${1}${s}=.*${t}${1}=${2}${t}"
+    if test "x$cfg_filter" = "x"; then
+        cfg_filter="$s"
+    else
+        cfg_filter="$cfg_filter;$s"
+    fi
+}
+
+cfg_help () {
+    cat <<EOF
+Usage: $cfg_progname [-h|--help] [--yorick=PATH_TO_YORICK]
+General Options (current value in brackets):
+  --arch=OS-CPU                Architecture [$cfg_arch].
+  --yorick=PATH                Path to Yorick executable [$cfg_yorick].
+  --cflags=CFLAGS              Additional compiler flags [$cfg_cflags], for instance:
+                                 --cflags='-Isomedir'
+  --ldflags=LDFLAGS            Additional linker flags [$cfg_ldflags].
+  --deplibs=DEPLIBS            Additional libraries [$cfg_deplibs], for instance:
+                                 --deplibs='-Lsomedir -lsomelib'
+  --debug                      Turn debug mode on (for this script).
+  -h, --help                   Print this help and exit.
+
+Options for FFTW2:
+  --with-fftw2=yes/no          Build FFTW2 plugin [$cfg_with_fftw2].
+  --fftw2-cflags=...           Additional compiler flags [$cfg_fftw2_cflags].
+  --fftw2-ldflags=...          Additional linker flags [$cfg_fftw2_ldflags].
+  --fftw2-deplibs=...          Additional libraries [$cfg_fftw2_deplibs].
+
+Options for FFTW2 with threads:
+  --with-fftw2-threads=yes/no  Build threaded FFTW2 plugin [$cfg_with_fftw2_threads].
+  --fftw2-threads-cflags=...   Additional compiler flags [$cfg_fftw2_threads_cflags].
+  --fftw2-threads-ldflags=...  Additional linker flags [$cfg_fftw2_threads_ldflags].
+  --fftw2-threads-deplibs=...  Additional libraries [$cfg_fftw2_threads_deplibs].
+
+Options for FFTW3:
+  --with-fftw3=yes/no          Build FFTW3 plugin [$cfg_with_fftw3].
+  --fftw3-cflags=...           Additional compiler flags [$cfg_fftw3_cflags].
+  --fftw3-ldflags=...          Additional linker flags [$cfg_fftw3_ldflags].
+  --fftw3-deplibs=...          Additional libraries [$cfg_fftw3_deplibs].
+
+Options for FFTW3 with threads:
+  --with-fftw3-threads=yes/no  Build threaded FFTW3 plugin [$cfg_with_fftw3_threads].
+  --fftw3-threads-cflags=...   Additional compiler flags [$cfg_fftw3_threads_cflags].
+  --fftw3-threads-ldflags=...  Additional linker flags [$cfg_fftw3_threads_ldflags].
+  --fftw3-threads-deplibs=...  Additional libraries [$cfg_fftw3_threads_deplibs].
+EOF
+}
+
+if cmp -s "./Makefile" "$cfg_srcdir/Makefile"; then
+    cfg_inplace=yes
+else
+    cfg_inplace=no
+fi
+
+cfg_os=$(uname -s | tr A-Z a-z)
+if test "x$cfg_os" = "x"; then
+    cfg_os="unknown"
+fi
+cfg_cpu=$(uname -m | tr A-Z a-z)
+if test "x$cfg_cpu" = "x"; then
+    cfg_cpu="unknown"
+else
+    case "$cfg_cpu" in i?86 ) cfg_cpu="ix86";; esac
+fi
+cfg_arch=${cfg_os}-${cfg_cpu}
+cfg_yorick=yorick
+cfg_prefix=/usr/local
+while test $# -ge 1; do
+    cfg_arg=$1
+    shift
+    case "$cfg_arg" in
+        -h | --help )
+            cfg_help
+            exit 0
+            ;;
+        --debug)
+            cfg_debug=yes
+            ;;
+        --yorick=*)
+            cfg_yorick=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --arch=*)
+            cfg_arch=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --cflags=*)
+            cfg_cflags=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --deplibs=*)
+            cfg_deplibs=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --ldflags=*)
+            cfg_ldflags=$(cfg_opt_value "$cfg_arg")
+            ;;
+
+        --with-fftw2)
+            cfg_with_fftw2="yes"
+            ;;
+        --without-fftw2)
+            cfg_with_fftw2="no"
+            ;;
+        --with-fftw2=*)
+            cfg_with_fftw2=$(cfg_opt_yes_or_no "$cfg_arg")
+            if test "$cfg_with_fftw2" = ""; then
+                cfg_die "Bad value for option --with-fftw2, should be \"yes\" or \"no\""
+            fi
+            ;;
+        --fftw2-cflags=*)
+            cfg_fftw2_cflags=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --fftw2-deplibs=*)
+            cfg_fftw2_deplibs=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --fftw2-ldflags=*)
+            cfg_fftw2_ldflags=$(cfg_opt_value "$cfg_arg")
+            ;;
+
+        --with-fftw2-threads)
+            cfg_with_fftw2_threads="yes"
+            ;;
+        --without-fftw2-threads)
+            cfg_with_fftw2_threads="no"
+            ;;
+        --with-fftw2-threads=*)
+            cfg_with_fftw2_threads=$(cfg_opt_yes_or_no "$cfg_arg")
+            if test "$cfg_with_fftw2_threads" = ""; then
+                cfg_die "Bad value for option --with-fftw2-threads, should be \"yes\" or \"no\""
+            fi
+            ;;
+        --fftw2-threads-cflags=*)
+            cfg_fftw2_threads_cflags=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --fftw2-threads-deplibs=*)
+            cfg_fftw2_threads_deplibs=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --fftw2-threads-ldflags=*)
+            cfg_fftw2_threads_ldflags=$(cfg_opt_value "$cfg_arg")
+            ;;
+
+        --with-fftw3)
+            cfg_with_fftw3="yes"
+            ;;
+        --without-fftw3)
+            cfg_with_fftw3="no"
+            ;;
+        --with-fftw3=*)
+            cfg_with_fftw3=$(cfg_opt_yes_or_no "$cfg_arg")
+            if test "$cfg_with_fftw3" = ""; then
+                cfg_die "Bad value for option --with-fftw3, should be \"yes\" or \"no\""
+            fi
+            ;;
+        --fftw3-cflags=*)
+            cfg_fftw3_cflags=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --fftw3-deplibs=*)
+            cfg_fftw3_deplibs=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --fftw3-ldflags=*)
+            cfg_fftw3_ldflags=$(cfg_opt_value "$cfg_arg")
+            ;;
+
+        --with-fftw3-threads)
+            cfg_with_fftw3_threads="yes"
+            ;;
+        --without-fftw3-threads)
+            cfg_with_fftw3_threads="no"
+            ;;
+        --with-fftw3-threads=*)
+            cfg_with_fftw3_threads=$(cfg_opt_yes_or_no "$cfg_arg")
+            if test "$cfg_with_fftw3_threads" = ""; then
+                cfg_die "Bad value for option --with-fftw3-threads, should be \"yes\" or \"no\""
+            fi
+            ;;
+        --fftw3-threads-cflags=*)
+            cfg_fftw3_threads_cflags=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --fftw3-threads-deplibs=*)
+            cfg_fftw3_threads_deplibs=$(cfg_opt_value "$cfg_arg")
+            ;;
+        --fftw3-threads-ldflags=*)
+            cfg_fftw3_threads_ldflags=$(cfg_opt_value "$cfg_arg")
+            ;;
+
+        *)
+            cfg_die "Unknown option \"$cfg_arg\""
+    esac
+done
+
+case "$cfg_arch" in
+    mswin )
+        cfg_exe_sfx=.exe
+        ;;
+    * )
+        cfg_exe_sfx=
+esac
+
+# Search Yorick in the path:
+if test "x$cfg_yorick" = "xyorick"; then
+    cfg_save_IFS=$IFS
+    IFS=":"
+    for cfg_dir in $PATH; do
+        cfg_file=$cfg_dir/yorick$cfg_exe_sfx
+        if test -r "$cfg_file" -a -x "$cfg_file" -a ! -d "$cfg_file"; then
+            cfg_yorick=$cfg_file
+            break
+        fi
+    done
+    IFS=$cfg_save_IFS
+fi
+if test "x$cfg_yorick" = "xyorick" \
+    -o ! -f "$cfg_yorick" \
+    -o ! -x "$cfg_yorick"; then
+    echo >&2 "Yorick excutable not found."
+    echo >&2 "Try to specify the path with option --yorick=..."
+    exit 1
+fi
+echo >&2 "Yorick executable --------> $cfg_yorick"
+
+# Get the Y_HOME and Y_SITE variables.
+cat >"$cfg_tmpfile.i" <<EOF
+write, format = "Y_HOME=%s\nY_SITE=%s\n", Y_HOME, Y_SITE;
+quit;
+EOF
+"$cfg_yorick" -batch "$cfg_tmpfile.i" > "$cfg_tmpfile"
+
+cfg_yhome=$(sed < "$cfg_tmpfile" -e '/^Y_HOME=/!d;s/^Y_HOME=//')
+cfg_ysite=$(sed < "$cfg_tmpfile" -e '/^Y_SITE=/!d;s/^Y_SITE=//')
+cfg_ymkdir=$cfg_yhome
+echo >&2 "Yorick home directory ----> $cfg_yhome"
+echo >&2 "Yorick site directory ----> $cfg_ysite"
+
+# List of targets:
+cfg_targets=""
+if test "$cfg_with_fftw2" = "yes"; then
+    cfg_targets="$cfg_targets fftw2"
+else
+    cfg_fftw2_cflags=""
+    cfg_fftw2_ldflags=""
+    cfg_fftw2_deplibs=""
+fi
+if test "$cfg_with_fftw2_threads" = "yes"; then
+    cfg_targets="$cfg_targets fftw2_threads"
+else
+    cfg_fftw2_threads_cflags=""
+    cfg_fftw2_thread_ldflags=""
+    cfg_fftw2_thread_deplibs=""
+fi
+if test "$cfg_with_fftw3" = "yes"; then
+    cfg_targets="$cfg_targets fftw3"
+else
+    cfg_fftw3_cflags=""
+    cfg_fftw3_ldflags=""
+    cfg_fftw3_deplibs=""
+fi
+if test "$cfg_with_fftw3_threads" = "yes"; then
+    cfg_targets="$cfg_targets fftw3_threads"
+else
+    cfg_fftw3_threads_cflags=""
+    cfg_fftw3_thread_ldflags=""
+    cfg_fftw3_thread_deplibs=""
+fi
+
+# Create the Makefile.
+cfg_dst="./Makefile"
+if test "$cfg_inplace" = "yes"; then
+    cfg_src="$cfg_dst.bak"
+    mv -f "$cfg_dst" "$cfg_src"
+else
+    cfg_src="$cfg_srcdir/Makefile"
+fi
+cfg_filter=""
+cfg_add_rule "srcdir"                "$cfg_srcdir"
+cfg_add_rule "Y_EXE"                 "$cfg_yorick"
+cfg_add_rule "Y_MAKEDIR"             "$cfg_ymkdir"
+cfg_add_rule "Y_EXE_HOME"            "$cfg_yhome"
+cfg_add_rule "Y_EXE_SITE"            "$cfg_ysite"
+cfg_add_rule "PKG_CFLAGS"            "$cfg_cflags"
+cfg_add_rule "PKG_DEPLIBS"           "$cfg_deplibs"
+cfg_add_rule "PKG_LDFLAGS"           "$cfg_ldflags"
+cfg_add_rule "TARGETS"               "$cfg_targets"
+cfg_add_rule "FFTW2_CFLAGS"          "$cfg_fftw2_cflags"
+cfg_add_rule "FFTW2_LDFLAGS"         "$cfg_fftw2_ldflags"
+cfg_add_rule "FFTW2_DEPLIBS"         "$cfg_fftw2_deplibs"
+cfg_add_rule "FFTW2_THREADS_CFLAGS"  "$cfg_fftw2_threads_cflags"
+cfg_add_rule "FFTW2_THREADS_LDFLAGS" "$cfg_fftw2_threads_ldflags"
+cfg_add_rule "FFTW2_THREADS_DEPLIBS" "$cfg_fftw2_threads_deplibs"
+cfg_add_rule "FFTW3_CFLAGS"          "$cfg_fftw3_cflags"
+cfg_add_rule "FFTW3_LDFLAGS"         "$cfg_fftw3_ldflags"
+cfg_add_rule "FFTW3_DEPLIBS"         "$cfg_fftw3_deplibs"
+cfg_add_rule "FFTW3_THREADS_CFLAGS"  "$cfg_fftw3_threads_cflags"
+cfg_add_rule "FFTW3_THREADS_LDFLAGS" "$cfg_fftw3_threads_ldflags"
+cfg_add_rule "FFTW3_THREADS_DEPLIBS" "$cfg_fftw3_threads_deplibs"
+sed < "$cfg_src" > "$cfg_dst" -e "$cfg_filter"
+
+if test "$cfg_inplace" = "yes"; then
+    rm -f "$cfg_src"
+fi
+
+for dst in Makedll Makeexe; do
+    src="$cfg_ymkdir/$dst"
+    echo  >"$dst" "# Modified version of $dst for XFFT (the only difference is that"
+    echo >>"$dst" "# ywrap.o is not compiled)."
+    sed <"$src" >>"$dst" -e 's/\(^\|[ 	]\)ywrap\.o\([ 	]\|$\)/\1\2/g'
+done
+
+echo "Makefile, Makedll and Makexe have been updated."
+echo "You can run 'make' and 'make install' now."
+
+# Local Variables:
+# mode: sh
+# tab-width: 8
+# indent-tabs-mode: nil
+# fill-column: 78
+# coding: utf-8
+# End:

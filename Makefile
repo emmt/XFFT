@@ -6,14 +6,10 @@
 # -----------------------------------------------------------------------------
 
 # Current version (a final 'x' indicates a development version)
-VERSION = 0.0.4
+VERSION = 0.1.0
 
 #---- BEGIN OF CUSTOMIZABLE PART ----------------------------------------------
 # Edit this part for customization.
-
-# This prefix can be (re)defined to indicate where standard libraries are
-# installed:
-PREFIX = /usr/local
 
 # Choose which package to build (fftw2 and/or fftw3 with/without threads):
 TARGETS = fftw2 fftw2_threads fftw3 fftw3_threads
@@ -21,38 +17,41 @@ TARGETS = fftw2 fftw2_threads fftw3 fftw3_threads
 # Set compiler and (rarely) loader flags and libraries for FFTW2 (you can add
 # -DFFTW_PREFIX=1 to FFTW2_CFLAGS if you have compiled FFTW with option
 # --enable-prefix):
-FFTW2_CFLAGS  = -I$(PREFIX)/include
+FFTW2_CFLAGS  =
 FFTW2_LDFLAGS =
-FFTW2_DEPLIBS = -L$(PREFIX)/lib -lrfftw -lfftw
+FFTW2_DEPLIBS = -lrfftw -lfftw
 
 # Similarly for FFTW2 with threads.
-FFTW2_THREADS_CFLAGS = $(FFTW2_CFLAGS)
+FFTW2_THREADS_CFLAGS =
 FFTW2_THREADS_LDFLAGS =
-FFTW2_THREADS_DEPLIBS = -L$(PREFIX)/lib -lrfftw_threads -lfftw_threads -lrfftw -lfftw -lpthread
+FFTW2_THREADS_DEPLIBS = -lrfftw_threads -lfftw_threads -lrfftw -lfftw -lpthread
 
 # Similarly for FFTW3.
-FFTW3_CFLAGS  = -I$(PREFIX)/include
+FFTW3_CFLAGS  =
 FFTW3_LDFLAGS =
-FFTW3_DEPLIBS = -L$(PREFIX)/lib -lfftw3
+FFTW3_DEPLIBS = -lfftw3
 
 # Similarly for FFTW3 with threads.
-FFTW3_THREADS_CFLAGS  = $(FFTW3_CFLAGS)
+FFTW3_THREADS_CFLAGS  =
 FFTW3_THREADS_LDFLAGS =
-FFTW3_THREADS_DEPLIBS = -L$(PREFIX)/lib -lfftw3_threads -lfftw3 -lpthread
+FFTW3_THREADS_DEPLIBS = -lfftw3_threads -lfftw3 -lpthread
 
 # Similarly for CFFT:
 CFFT_CFLAGS  =
 CFFT_LDFLAGS =
-CFFT_DEPLIBS = 
+CFFT_DEPLIBS =
 
 #---- END OF CUSTOMIZABLE PART ------------------------------------------------
 
+# where are the sources? (automatically filled in by configure script)
+srcdir=.
+
 # these values filled in by yorick -batch make.i
-Y_MAKEDIR=/apps/libexec/yorick/current
-Y_EXE=/apps/libexec/yorick/current/bin/yorick
+Y_MAKEDIR=
+Y_EXE=
 Y_EXE_PKGS=
-Y_EXE_HOME=/apps/libexec/yorick/current
-Y_EXE_SITE=/apps/libexec/yorick/current
+Y_EXE_HOME=
+Y_EXE_SITE=
 Y_HOME_PKG=
 
 all: $(TARGETS)
@@ -68,6 +67,7 @@ help:
 # These common sed rules must be the last:
 SED_COMMON = \
   -e 's,@VERSION@,$(VERSION),g' \
+  -e 's,@srcdir@,$(srcdir),g' \
   -e 's,@Y_MAKEDIR@,$(Y_MAKEDIR),g' \
   -e 's,@Y_EXE@,$(Y_EXE),g' \
   -e 's,@Y_EXE_PKGS@,$(Y_EXE_PKGS),g' \
@@ -124,7 +124,7 @@ cfft: xfft_cfft
 xfft_cfft: xfft_cfft.mkf
 	make -f xfft_cfft.mkf
 
-xfft_cfft.mkf: xfft_generic.mkf Makefile
+xfft_cfft.mkf: ${srcdir}/xfft_generic.mkf Makefile
 	sed <"$<" >"$@" $(SED_CFFT) $(SED_COMMON)
 
 
@@ -135,7 +135,7 @@ fftw2: xfft_fftw2
 xfft_fftw2: xfft_fftw2.mkf
 	make -f xfft_fftw2.mkf
 
-xfft_fftw2.mkf: xfft_generic.mkf Makefile
+xfft_fftw2.mkf: ${srcdir}/xfft_generic.mkf Makefile
 	sed <"$<" >"$@" $(SED_FFTW2) $(SED_COMMON)
 
 
@@ -146,7 +146,7 @@ fftw2_threads: xfft_fftw2_threads
 xfft_fftw2_threads: xfft_fftw2_threads.mkf
 	make -f xfft_fftw2_threads.mkf
 
-xfft_fftw2_threads.mkf: xfft_generic.mkf Makefile
+xfft_fftw2_threads.mkf: ${srcdir}/xfft_generic.mkf Makefile
 	sed <"$<" >"$@" $(SED_FFTW2_THREADS) $(SED_COMMON)
 
 
@@ -157,7 +157,7 @@ fftw3: xfft_fftw3
 xfft_fftw3: xfft_fftw3.mkf
 	make -f xfft_fftw3.mkf
 
-xfft_fftw3.mkf: xfft_generic.mkf Makefile
+xfft_fftw3.mkf: ${srcdir}/xfft_generic.mkf Makefile
 	sed <"$<" >"$@" $(SED_FFTW3) $(SED_COMMON)
 
 
@@ -168,7 +168,7 @@ fftw3_threads: xfft_fftw3_threads
 xfft_fftw3_threads: xfft_fftw3_threads.mkf
 	make -f xfft_fftw3_threads.mkf
 
-xfft_fftw3_threads.mkf: xfft_generic.mkf Makefile
+xfft_fftw3_threads.mkf: ${srcdir}/xfft_generic.mkf Makefile
 	sed <"$<" >"$@" $(SED_FFTW3_THREADS) $(SED_COMMON)
 
 
@@ -196,8 +196,28 @@ install:
 #distclean: clean-here
 #	rm -rf fftw2 fftw3
 
-DISTRIB_FILES = Makefile Makedll Makeexe AUTHORS LICENSE README NEWS FAQ.txt \
+DISTRIB_FILES = Makefile AUTHORS LICENSE README NEWS FAQ.txt \
                 xfft.c xfft.i xfft_generic.i xfft_generic.mkf
+
+bump-version:
+	@oldversion=`sed < Makefile -e '/^ *VERSION *=/!d;s/^ *VERSION *= *\(.*[^ ]\) *$$/\1/'`; \
+	newversion=`echo $(VERSION) | sed -e 's/^ *//;s/ *$$//'`; \
+	if test "$$oldversion" = "$$newversion"; then \
+	  echo "No version change (VERSION=$$oldversion)."; \
+	  echo "To change the version, try:"; \
+	  echo "   make $@ VERSION=..."; \
+	else \
+	  sed <Makefile >Makefile.tmp -e "s/^ *VERSION *=.*$$/VERSION = $$newversion/"; \
+	  mv -f Makefile.tmp Makefile; \
+	  echo "New version is $$newversion (previous version was $$oldversion)."; \
+	  echo "You may make a new release with:"; \
+	  echo "    git commit -m 'New version v$$newversion' Makefile"; \
+	  echo "    git tag 'v$$newversion'"; \
+	  echo "    git push all"; \
+	  echo "    git push --tags"; \
+	  echo "    make distrib"; \
+	fi; \
+	return 0
 
 distrib:
 	@if test "x$(VERSION)" = "x"; then \

@@ -5,6 +5,9 @@
 #
 # ------------------------------------------------------------------------
 
+# where are the sources? (automatically filled in by configure script)
+srcdir=@srcdir@
+
 # these values are filled in by: yorick -batch make.i
 Y_MAKEDIR=@Y_MAKEDIR@
 Y_EXE=@Y_EXE@
@@ -43,9 +46,9 @@ EXTRA_PKGS=$(Y_EXE_PKGS)
 PKG_CLEAN=
 
 # autoload file for this package, if any
-PKG_I_START=
+PKG_I_START=${srcdir}/xfft-autoload.i
 # non-pkg.i include files for this package, if any
-PKG_I_EXTRA=xfft.i
+PKG_I_EXTRA=${srcdir}/xfft.i
 
 # -------------------------------- standard targets and rules (in Makepkg)
 
@@ -76,23 +79,23 @@ MAKE_TEMPLATE = protect-against-1.5
 
 # ------------------------------------- targets and rules for this package
 
-xfft_@impl@.i: xfft_generic.i
+xfft_@impl@.i: ${srcdir}/xfft_generic.i
 	sed -e 's/xfft_generic/xfft_@impl@/g;s/%impl%/@impl@/g;s/%IMPL%/@IMPL@/g' \
 	  <"$<" >"$@"
 
 # "xfft_@impl@.i" is added as dependency to force it to be built during
-# compilation: 
-xfft_@impl@.o: xfft.c xfft_@impl@.i
+# compilation:
+xfft_@impl@.o: ${srcdir}/xfft.c xfft_@impl@.i
 	$(CC) $(CPPFLAGS) $(CFLAGS) -DXFFT_VERSION=\"@VERSION@\" \
 	  -DXFFT_IMPL="@IMPL@" -DXFFT_impl="@impl@" \
 	  -o "$@" -c "$<"
 
 #ywrap.o: ywrap_@impl@.o
-# 
+#
 #ywrap_@impl@.o: ywrap_@impl@.c $(H_YWRAP)
 # 	$(CC) $(CPPFLAGS) $(CFLAGS) -o "$@" -c "$<"
 # 	cp -a "$@" ywrap.o
-# 
+#
 #ywrap_@impl@.c: Makefile $(CODGER_DEP) $(PKG_I_DEPS)
 # 	$(CODGER) w $(PKG_NAME) -o "$@" $(PKG_I_DIR) $(PKG_I)
 
