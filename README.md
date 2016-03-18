@@ -23,68 +23,77 @@ array are not supported by XFFT.
 Installation
 ------------
 
-In short, building and installing the Yorick plug-in(s) can be as quick as:
-```sh
-    cd BUILD_DIR
-    SRC_DIR/configure
-    make
-    make install
-```
-where `BUILD_DIR` is the build directory (at your convenience) and `SRC_DIR` is
-the source directory of the plug-in code.  The build and source directories
-can be the same in which case, call `./configure` to configure for building.
+In short, building and installing the plug-in can be as quick as:
+````{.sh}
+cd $BUILD_DIR
+$SRC_DIR/configure
+make
+make install
+````
+where `$BUILD_DIR` is the build directory (at your convenience) and
+`$SRC_DIR` is the source directory of the plug-in code.  The build and
+source directories can be the same in which case, call `./configure` to
+configure for building.
 
-To use the plug-in, start the Yorick interpreter and type:
-```C
-    #include "xfft.i"
-    help, xfft_new;
-```
-The `#include` directive may be omitted if XFFT plug-ins are properly
-installed.  More detailled explanations are given below.
+If the plug-in has been properly installed, it is sufficient to use any
+of its functions (like `xfft_new`) to automatically load the plug-in.
+You may force the loading of the plug-in by something like:
+````{.cpp}
+#include "xfft.i"
+````
+or
+````{.cpp}
+require, "xfft.i";
+````
+in your code.
+
+More detailled installation explanations are given below.
+
 
 0. You must have [Yorick](http://yorick.github.com/) installed on your
    machine and the various FFT libraries.
 
 1. Unpack the plug-in code somewhere.
 
-2. Configure for compilation.  The are two possibilities:
+2. Configure for compilation.  There are two possibilities:
 
-   * For an **in-place build**, go to the source directory of the plug-in
+   * For an **in-place build**, go to the source directory of the plug-in 
      code and run the configuration script:
-     ```sh
-         cd SRC_DIR
-         ./configure
-     ```
+     ````{.sh}
+     cd $SRC_DIR
+     ./configure
+     ````
      To see the configuration options, call:
-     ```sh
-         ./configure --help
-     ```
+     ````{.sh}
+     ./configure --help
+     ````
 	 See below for more informations about the options.
 
-   * To compile in a **different build directory**, say `BUILD_DIR`, create
-     the build directory, go to the build directory, and run the
+   * To compile in a **different build directory**, say `$BUILD_DIR`, create
+     the build directory, go to the build directory and run the
      configuration script:
-     ```sh
-         mkdir -p BUILD_DIR
-         cd BUILD_DIR
-         SRC_DIR/configure
-     ```
-     where `SRC_DIR` is the path to the source directory of the plug-in code.
+     ````{.sh}
+     mkdir -p $BUILD_DIR
+     cd $BUILD_DIR
+     $SRC_DIR/configure
+     ````
+     where `$SRC_DIR` is the path to the source directory of the plug-in code.
      To see the configuration options, call:
-     ```sh
-         SRC_DIR/configure --help
-     ```
+     ````{.sh}
+     $SRC_DIR/configure --help
+     ````
 	 See below for more informations about the options.
 
 3. Compile the code:
-   ```sh
-       make
-   ```
+   ````{.sh}
+   make clean
+   make
+   ````
 
 4. Install the plug-in in Yorick directories:
-   ```sh
-       make install
-   ```
+   ````{.sh}
+   make install
+   ````
 
 
 Configuration Options
