@@ -6,7 +6,7 @@
  *
  *-----------------------------------------------------------------------------
  *
- * Copyright (C) 2009-2015: Éric Thiébaut <eric.thiebaut@univ-lyon1.fr>
+ * Copyright (C) 2009-2018: Éric Thiébaut <https://github.com/emmt/XFFT>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -1424,14 +1424,3 @@ char *YK_XFFT(char ***ifiles, BuiltIn ***code,
   *varname = y0_names;
   return y0_pkgname;
 }
-
-/*
- * Local Variables:
- * mode: C
- * tab-width: 8
- * c-basic-offset: 2
- * indent-tabs-mode: nil
- * fill-column: 79
- * coding: utf-8
- * End:
- */

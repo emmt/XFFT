@@ -4,7 +4,7 @@
 #
 #------------------------------------------------------------------------------
 #
-# Copyright (C) 2015: Éric Thiébaut <eric.thiebaut@univ-lyon1.fr>
+# Copyright (C) 2009-2018: Éric Thiébaut <https://github.com/emmt/XFFT>
 #
 #------------------------------------------------------------------------------
 
@@ -397,11 +397,3 @@ done
 
 echo "Makefile, Makedll and Makexe have been updated."
 echo "You can run 'make' and 'make install' now."
-
-# Local Variables:
-# mode: sh
-# tab-width: 8
-# indent-tabs-mode: nil
-# fill-column: 78
-# coding: utf-8
-# End:

@@ -5,7 +5,7 @@
  *
  *-----------------------------------------------------------------------------
  *
- * Copyright (C) 2009-2015: Éric Thiébaut <eric.thiebaut@univ-lyon1.fr>
+ * Copyright (C) 2009-2018: Éric Thiébaut <https://github.com/emmt/XFFT>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -254,14 +254,3 @@ if (is_func(xfft_new) != 2 &&
     xfft_try_include("cfft") != 0) {
   error, "no implementation for XFFT plug-in found";
 }
-
-/*
- * Local Variables:
- * mode: Yorick
- * tab-width: 8
- * c-basic-offset: 2
- * indent-tabs-mode: nil
- * fill-column: 79
- * coding: utf-8
- * End:
- */
