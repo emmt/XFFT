@@ -195,11 +195,14 @@ static y_userobj_t xform_class = {
 
 /* These constants are defined (without the leading "Y") in "fftw.i". */
 #define XFFT_DIRECT                       0
-#define XFFT_CONJUGATE_TRANSPOSE          1
+#define XFFT_ADJOINT                      1
+#define XFFT_CONJUGATE_TRANSPOSE          XFFT_ADJOINT
 #define XFFT_INVERSE                      2
-#define XFFT_INVERSE_CONJUGATE_TRANSPOSE  3
+#define XFFT_INVERSE_ADJOINT              3
+#define XFFT_ADJOINT_INVERSE              XFFT_INVERSE_ADJOINT
+#define XFFT_INVERSE_CONJUGATE_TRANSPOSE  XFFT_INVERSE_ADJOINT
 #define XFFT_FORWARD                      XFFT_DIRECT
-#define XFFT_BACKWARD                     XFFT_CONJUGATE_TRANSPOSE
+#define XFFT_BACKWARD                     XFFT_ADJOINT
 
 struct _xform {
   double scale; /* scaling factor to normalize the FFT */
@@ -600,7 +603,7 @@ static void eval_xform(void *ptr, int argc)
       forward = TRUE;
       rescale = FALSE;
       break;
-    case XFFT_CONJUGATE_TRANSPOSE:
+    case XFFT_ADJOINT:
       forward = FALSE;
       rescale = FALSE;
       break;
@@ -608,7 +611,7 @@ static void eval_xform(void *ptr, int argc)
       forward = FALSE;
       rescale = TRUE;
       break;
-    case XFFT_INVERSE_CONJUGATE_TRANSPOSE:
+    case XFFT_INVERSE_ADJOINT:
       forward = TRUE;
       rescale = TRUE;
       break;
@@ -1213,12 +1216,12 @@ static void XFFT_BUILTIN(implementation)(int argc)
 
 static void XFFT_BUILTIN(best_dim)(int argc)
 {
-  /* FFTW is best at handling sizes of the form 2^a 3^b 5^c 7^d 11^e 13^f,where e+f
-     is either 0 or 1, and the other exponents are arbitrary. Other sizes are
-     computed by means of a slow, general-purpose algorithm (which
+  /* FFTW is best at handling sizes of the form 2^a 3^b 5^c 7^d 11^e 13^f,
+     where e+f is either 0 or 1, and the other exponents are arbitrary. Other
+     sizes are computed by means of a slow, general-purpose algorithm (which
      nevertheless retains O(n log n) performance even for prime sizes). It is
-     possible to customize FFTW for different array sizes; see Installation
-     and Customization. Transforms whose sizes are powers of 2 are especially
+     possible to customize FFTW for different array sizes; see Installation and
+     Customization. Transforms whose sizes are powers of 2 are especially
      fast. */
   long len, best, k, i2, i3, i5, i7;
 

@@ -38,11 +38,10 @@ local xfft_new;
      where optional argument JOB is:
 
        0 or XFFT_DIRECT or XFFT_FORWARD, for the direct transform;
-       1 or XFFT_CONJUGATE_TRANSPOSE or XFFT_BACKWARD, for the backward
+       1 or XFFT_ADJOINT or XFFT_BACKWARD, for the adjoint (that is, backward)
             transform;
        2 or XFFT_INVERSE, for the inverse transform;
-       3 or XFFT_INVERSE_CONJUGATE_TRANSPOSE, for the conjugate
-            transpose of the inverse transform;
+       3 or XFFT_INVERSE_ADJOINT, for the adjoint of the inverse transform;
 
      By default JOB=0 (so the forward or direct transform is performed).  The
      inverse transform is just the backward transform normalized (i.e. divided
@@ -102,9 +101,9 @@ XFFT_MEASURE    = 1;
 XFFT_PATIENT    = 2;
 XFFT_EXHAUSTIVE = 3;
 XFFT_FORWARD = XFFT_DIRECT = 0;
-XFFT_BACKWARD = XFFT_CONJUGATE_TRANSPOSE = 1;
+XFFT_BACKWARD = XFFT_ADJOINT = XFFT_CONJUGATE_TRANSPOSE = 1;
 XFFT_INVERSE = 2;
-XFFT_INVERSE_CONJUGATE_TRANSPOSE = 3;
+XFFT_INVERSE_ADJOINT = XFFT_ADJOINT_INVERSE = XFFT_INVERSE_CONJUGATE_TRANSPOSE = 3;
 
 func xfft_info(..)
 /* DOCUMENT xfft_info;
