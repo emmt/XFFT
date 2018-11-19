@@ -197,7 +197,7 @@ install:
 #	rm -rf fftw2 fftw3
 
 DISTRIB_FILES = Makefile AUTHORS LICENSE.md README.md NEWS FAQ.txt configure \
-                xfft.c xfft.i xfft-autoload.i xfft_generic.i xfft_generic.mkf
+                xfft.c xfft.i xfft-start.i xfft_generic.i xfft_generic.mkf
 
 bump-version:
 	@oldversion=`sed < Makefile -e '/^ *VERSION *=/!d;s/^ *VERSION *= *\(.*[^ ]\) *$$/\1/'`; \

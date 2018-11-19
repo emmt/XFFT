@@ -46,7 +46,7 @@ EXTRA_PKGS=$(Y_EXE_PKGS)
 PKG_CLEAN=
 
 # autoload file for this package, if any
-PKG_I_START=${srcdir}/xfft-autoload.i
+PKG_I_START=${srcdir}/xfft-start.i
 # non-pkg.i include files for this package, if any
 PKG_I_EXTRA=${srcdir}/xfft.i
 
