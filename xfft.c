@@ -166,6 +166,7 @@ static void create_plan(xform_t *xform, int forward);
 static long align_index = -1L;
 static long dims_index = -1L;
 static long impl_index = -1L;
+static long kind_index = -1L;
 static long nevals_index = -1L;
 static long nthreads_index = -1L;
 static long planning_index = -1L;
@@ -204,9 +205,32 @@ static y_userobj_t xform_class = {
 #define XFFT_FORWARD                      XFFT_DIRECT
 #define XFFT_BACKWARD                     XFFT_ADJOINT
 
+/* The 11 different transforms implemented by FFTW. */
+#define XFFT_FFT     -1
+#define XFFT_R2HC     0
+#define XFFT_HC2R     1
+#define XFFT_DHT      2
+#define XFFT_REDFT00  3
+#define XFFT_REDFT01  4
+#define XFFT_REDFT10  5
+#define XFFT_REDFT11  6
+#define XFFT_RODFT00  7
+#define XFFT_RODFT01  8
+#define XFFT_RODFT10  9
+#define XFFT_RODFT11 10
+
+#define XFFT_IS_R2R(kind)   (XFFT_R2HC <= (kind) && (kind) <= XFFT_RODFT11)
+
+/* Global kind of transform. */
+#define COMPLEX_TO_COMPLEX  0
+#define COMPLEX_TO_REAL     1
+#define REAL_TO_COMPLEX     2
+#define REAL_TO_REAL        4
+
 struct _xform {
   double scale; /* scaling factor to normalize the FFT */
   long dims[Y_DIMSIZE];
+  int kinds[Y_DIMSIZE]; /* kinds of real-real transform */
   long r_size; /* number of real's in the real array */
   long z_size; /* number of real's in the complex array */
   long nevals;
@@ -215,7 +239,8 @@ struct _xform {
   void *ws; /* workspace */
   int nthreads;
   int planning;
-  int real;
+  int kind; /* kind of transform, one of: COMPLEX_TO_COMPLEX,
+               (COMPLEX_TO_REAL|REAL_TO_COMPLEX) or REAL_TO_REAL */
   int align;
 };
 
@@ -237,7 +262,7 @@ static void free_xform(void *ptr)
     }
   }
 #else /* FFTW2 */
-  if (xform->real) {
+  if (xform->kind == (COMPLEX_TO_REAL|REAL_TO_COMPLEX)) {
     if (xform->forward != NULL) {
       rfftwnd_destroy_plan(xform->forward);
     }
@@ -258,9 +283,123 @@ static void free_xform(void *ptr)
 #endif /* FFTW2/FFTW3 */
 }
 
+static const char*
+xform_kind_name(int kind)
+{
+  switch (kind) {
+  case XFFT_FFT:     return "FFT";
+  case XFFT_R2HC:    return "R2HC";
+  case XFFT_HC2R:    return "HC2R";
+  case XFFT_DHT:     return "DHT"; /* discrete Hartley transform */
+  case XFFT_REDFT00: return "DCT-I";
+  case XFFT_REDFT01: return "DCT-III";
+  case XFFT_REDFT10: return "DCT-II";
+  case XFFT_REDFT11: return "DCT-IV";
+  case XFFT_RODFT00: return "DST-I";
+  case XFFT_RODFT01: return "DST-III";
+  case XFFT_RODFT10: return "DST-II";
+  case XFFT_RODFT11: return "DST-IV";
+  default: return "Unknown";
+  }
+}
+
+static long
+xform_logical_size(int kind, long n)
+{
+  if (n < 1) {
+    y_error("invalid size for real-real transform");
+    return 0L;
+  }
+  switch (kind) {
+  case XFFT_R2HC:    return n;
+  case XFFT_HC2R:    return n;
+  case XFFT_DHT:     return n;
+  case XFFT_REDFT00: return 2*(n - 1);
+  case XFFT_REDFT01: return 2*n;
+  case XFFT_REDFT10: return 2*n;
+  case XFFT_REDFT11: return 2*n;
+  case XFFT_RODFT00: return 2*(n + 1);
+  case XFFT_RODFT01: return 2*n;
+  case XFFT_RODFT10: return 2*n;
+  case XFFT_RODFT11: return 2*n;
+  }
+  y_error("invalid kind of real-real transform");
+  return 0L;
+}
+
+#ifdef FFTW3
+static int
+xform_forward_kind(int kind)
+{
+  switch (kind) {
+  case XFFT_R2HC:    return FFTW_R2HC;
+  case XFFT_HC2R:    return FFTW_HC2R;
+  case XFFT_DHT:     return FFTW_DHT;
+  case XFFT_REDFT00: return FFTW_REDFT00;
+  case XFFT_REDFT01: return FFTW_REDFT01;
+  case XFFT_REDFT10: return FFTW_REDFT10;
+  case XFFT_REDFT11: return FFTW_REDFT11;
+  case XFFT_RODFT00: return FFTW_RODFT00;
+  case XFFT_RODFT01: return FFTW_RODFT01;
+  case XFFT_RODFT10: return FFTW_RODFT10;
+  case XFFT_RODFT11: return FFTW_RODFT11;
+  }
+  y_error("invalid kind of real-real transform");
+  return -1;
+}
+#endif
+
+#ifdef FFTW3
+static int
+xform_backward_kind(int kind)
+{
+  switch (kind) {
+  case XFFT_R2HC:    return FFTW_HC2R;
+  case XFFT_HC2R:    return FFTW_R2HC;
+  case XFFT_DHT:     return FFTW_DHT;
+  case XFFT_REDFT00: return FFTW_REDFT00;
+  case XFFT_REDFT01: return FFTW_REDFT10;
+  case XFFT_REDFT10: return FFTW_REDFT01;
+  case XFFT_REDFT11: return FFTW_REDFT11;
+  case XFFT_RODFT00: return FFTW_RODFT00;
+  case XFFT_RODFT01: return FFTW_RODFT10;
+  case XFFT_RODFT10: return FFTW_RODFT01;
+  case XFFT_RODFT11: return FFTW_RODFT11;
+  }
+  y_error("invalid kind of real-real transform");
+  return -1;
+}
+#endif
+
 static void print_xform(void *ptr)
 {
-  y_print("xfft operator with "XFFT_IMPL_NAME" implementation", 1);
+  xform_t *xform = (xform_t *)ptr;
+  y_print("xfft operator ("XFFT_IMPL_NAME" implementation) for ", 0);
+  if (xform->kind != REAL_TO_REAL) {
+    y_print("FFT", 1);
+  } else {
+    int i, kind = xform->kinds[1];
+    if (xform->kinds[0] > 0) {
+      for (i = 2; i <= xform->kinds[0]; ++i) {
+        if (xform->kinds[i] != kind) {
+          kind = -1;
+          break;
+        }
+      }
+    }
+    if (kind != -1) {
+      y_print(xform_kind_name(kind), 1);
+    } else {
+      y_print("[", 0);
+      for (i = 1; i <= xform->kinds[0]; ++i) {
+        if (i > 1) {
+          y_print(",", 0);
+        }
+        y_print(xform_kind_name(xform->kinds[i]), 0);
+      }
+      y_print("]", 1);
+    }
+  }
 }
 
 /* Implement the on_extract method to query a member of the object. */
@@ -284,12 +423,13 @@ static void extract_xform(void *ptr, char *member)
       for (j = 0; j <= ndims; ++j) {
 	dims[j] = xform_dims[j];
       }
-      if (ndims >= 1 && index == zdims_index && xform->real) {
+      if (ndims >= 1 && index == zdims_index &&
+          xform->kind == (COMPLEX_TO_REAL|REAL_TO_COMPLEX)) {
 	dims[1] = dims[1]/2L + 1L;
       }
     }
   } else if (index == real_index) {
-    ypush_int(xform->real ? TRUE : FALSE);
+    ypush_int(xform->kind == (COMPLEX_TO_REAL|REAL_TO_COMPLEX) ? TRUE : FALSE);
   } else if (index == align_index) {
     ypush_int(xform->align ? TRUE : FALSE);
   } else if (index == planning_index) {
@@ -300,6 +440,32 @@ static void extract_xform(void *ptr, char *member)
     ypush_long(xform->nevals);
   } else if (index == impl_index) {
     ypush_q(NULL)[0] = p_strcpy(XFFT_IMPL_NAME);
+  } else if (index == kind_index) {
+    if (xform->kind != REAL_TO_REAL) {
+      ypush_int(XFFT_FFT);
+    } else {
+      int i, kind = xform->kinds[1];
+      if (xform->kinds[0] > 0) {
+        for (i = 2; i <= xform->kinds[0]; ++i) {
+          if (xform->kinds[i] != kind) {
+            kind = -1;
+            break;
+          }
+        }
+      }
+      if (kind != -1) {
+        ypush_int(kind);
+      } else {
+        int* kinds;
+        long dims[2];
+        dims[0] = 1;
+        dims[1] = xform->kinds[0];
+        kinds = ypush_i(dims);
+        for (i = 1; i <= xform->kinds[0]; ++i) {
+          kinds[i - 1] = xform->kinds[i];
+        }
+      }
+    }
   } else {
     ypush_nil();
   }
@@ -571,9 +737,6 @@ static void (*scale_x_to_z[])(double *, const void *,
  *   rank = 0, scalar array, FFT is a no-op
  *   rank = 1
  */
-#define COMPLEX_TO_COMPLEX  0
-#define COMPLEX_TO_REAL     1
-#define REAL_TO_COMPLEX     2
 
 static void eval_xform(void *ptr, int argc)
 {
@@ -585,7 +748,7 @@ static void eval_xform(void *ptr, int argc)
   long inp_dim1, out_dim1;
   int rank;
 #endif
-  int arg_type, xform_type, forward, overwrite, rescale, job, scratch;
+  int arg_type, xform_kind, forward, overwrite, rescale, job, scratch;
   long dims[Y_DIMSIZE];
 
   /* Get the direction of the transform and check number of arguments. */
@@ -641,7 +804,7 @@ static void eval_xform(void *ptr, int argc)
     /* FIXME: it should be possible to perform in-place operation for other
        kind of arguments such as hash table members. */
     if (index < 0) {
-      y_error("when called as a subroutine, argument must be " \
+      y_error("when called as a subroutine, argument must be "
               "a simple variable, not a temporary expression");
     }
     overwrite = TRUE;
@@ -655,17 +818,20 @@ static void eval_xform(void *ptr, int argc)
   if (arg_type < 0 || arg_type > Y_COMPLEX) {
     y_error("invalid non-numerical data type");
   }
-  if (xform->real) {
+  if (xform->kind == (REAL_TO_COMPLEX|COMPLEX_TO_REAL)) {
     if (forward) {
       if (arg_type == Y_COMPLEX) {
 	y_error("invalid complex input for forward real-complex transform");
       }
-      xform_type = REAL_TO_COMPLEX;
+      xform_kind = REAL_TO_COMPLEX;
     } else {
-      xform_type = COMPLEX_TO_REAL;
+      xform_kind = COMPLEX_TO_REAL;
     }
   } else {
-    xform_type = COMPLEX_TO_COMPLEX;
+    xform_kind = xform->kind;
+    if (xform_kind == REAL_TO_REAL && arg_type == Y_COMPLEX) {
+      y_error("invalid complex input for real-real transform");
+    }
   }
 
   /* Check dimension list of the input array and get dimension list of the
@@ -682,7 +848,7 @@ static void eval_xform(void *ptr, int argc)
   if (ntot == 1) {
     /* Transform of a scalar is the identity so, at most, it is just a matter
        of converting the data type of the input. */
-    if (xform_type == COMPLEX_TO_REAL) {
+    if (xform_kind == COMPLEX_TO_REAL || xform_kind == REAL_TO_REAL) {
       out = ygeta_d(0, NULL, NULL);
     } else {
       out = ygeta_z(0, NULL, NULL);
@@ -700,7 +866,7 @@ static void eval_xform(void *ptr, int argc)
   }
   scale = (rescale ? xform->scale : 1.0);
 
-  if (xform_type == COMPLEX_TO_COMPLEX) {
+  if (xform_kind == COMPLEX_TO_COMPLEX) {
 
     /**************************/
     /* COMPLEX-TO-COMPLEX FFT */
@@ -738,7 +904,7 @@ static void eval_xform(void *ptr, int argc)
     out = ypush_z(dims);
     OUT_OF_PLACE_FFT(tmp, out);
 
-  } else if (xform_type == REAL_TO_COMPLEX) {
+  } else if (xform_kind == REAL_TO_COMPLEX) {
 
     /***********************/
     /* REAL-TO-COMPLEX FFT */
@@ -769,7 +935,7 @@ static void eval_xform(void *ptr, int argc)
     out = ypush_z(dims);
     OUT_OF_PLACE_FFT_R2C(tmp, out);
 
-  } else {
+  } else if (xform_kind == COMPLEX_TO_REAL) {
 
     /***********************/
     /* COMPLEX-TO-REAL FFT */
@@ -813,6 +979,39 @@ static void eval_xform(void *ptr, int argc)
     out = ypush_d(dims);
     OUT_OF_PLACE_FFT_C2R(tmp, out);
 
+  } else if (xform_kind == REAL_TO_REAL) {
+
+    /**************************/
+    /* REAL-TO-REAL TRANSFORM */
+    /**************************/
+
+#ifdef FFTW3
+    if (xform->align) {
+      /* Perform in-place transform. */
+      SCALE_X_TO_D(arg_type, xform->ws, inp, ntot, scale);
+      fftw_execute(plan);
+      (void)memcpy(ypush_d(dims), xform->ws, ntot*sizeof(double));
+    } else {
+      /* Perform out-of-place transform. */
+      if (overwrite && arg_type == Y_DOUBLE) {
+        tmp = inp;
+        if (scale != 1.0) {
+          scale_d(tmp, ntot, scale);
+        }
+      } else {
+        tmp = xform->ws;
+        SCALE_X_TO_D(arg_type, tmp, inp, ntot, scale);
+        yarg_drop(1);
+      }
+      out = ypush_d(dims);
+      fftw_execute_r2r(plan, tmp, out);
+    }
+#else
+    y_error("real-real transform is not supported by this implementation");
+#endif
+
+  } else {
+    y_error("unknown transform kind (BUG)");
   }
 
  done:
@@ -851,10 +1050,10 @@ static void create_plan(xform_t *xform, int forward)
 #ifdef FFTW3
   if (xform->align) {
     /* Will always use the internal buffer for in-place transforms. */
-    flags =  FFTW_DESTROY_INPUT;
+    flags = FFTW_DESTROY_INPUT;
   } else {
     /* Will always use a temporary input for out-of-place transforms. */
-    flags =  FFTW_UNALIGNED | FFTW_DESTROY_INPUT;
+    flags = FFTW_UNALIGNED | FFTW_DESTROY_INPUT;
   }
   if (xform->planning == XFFT_ESTIMATE) {
     flags |= FFTW_ESTIMATE;
@@ -902,33 +1101,59 @@ static void create_plan(xform_t *xform, int forward)
     out = &dummy[3];
   } else {
     /* Other planning methods will require to perform some FFT's so input and
-       output arrays must be given.  Here we allocated different arrays since
+       output arrays must be given.  Here we allocate different arrays since
        we will use out-of-place transforms. */
-    inp = ypush_scratch(xform->z_size*2*sizeof(double), NULL);
-    out = ((double *)inp) + xform->z_size;
+    inp = ypush_scratch(xform->z_size*sizeof(double), NULL); /* FIXME: r_size */
+    out = ypush_scratch(xform->z_size*sizeof(double), NULL);
   }
 # if USE_THREADS
   fftw_plan_with_nthreads(xform->nthreads);
 # endif
 #endif
   if (forward) {
-    if (xform->real) {
-      xform->forward = CHOICE(rfftwnd_create_plan(rank, n, FFTW_FORWARD, flags),
+    if (xform->kind == (COMPLEX_TO_REAL|REAL_TO_COMPLEX)) {
+      xform->forward = CHOICE(rfftwnd_create_plan(rank, n,
+                                                  FFTW_FORWARD, flags),
                               fftw_plan_dft_r2c(rank, n, inp, out, flags));
-    } else {
-      xform->forward = CHOICE(fftwnd_create_plan(rank, n, FFTW_FORWARD, flags),
-                              fftw_plan_dft(rank, n, inp, out, FFTW_FORWARD, flags));
+    } else if (xform->kind == COMPLEX_TO_COMPLEX) {
+      xform->forward = CHOICE(fftwnd_create_plan(rank, n,
+                                                 FFTW_FORWARD, flags),
+                              fftw_plan_dft(rank, n, inp, out,
+                                            FFTW_FORWARD, flags));
+    } else /* REAL_TO_REAL */ {
+#ifdef FFTW3
+      fftw_r2r_kind kinds[Y_DIMSIZE-1];
+      for (j = 0; j < rank; ++j) {
+        kinds[j] = xform_forward_kind(xform->kinds[rank - j]);
+      }
+      xform->forward = fftw_plan_r2r(rank, n, inp, out, kinds, flags);
+#else
+      y_error("forward real-real transform not implemented");
+#endif
     }
     if (xform->forward == NULL) {
       y_error("failed to allocate FFTW plan for forward transform");
     }
   } else {
-    if (xform->real) {
-      xform->backward = CHOICE(rfftwnd_create_plan(rank, n, FFTW_BACKWARD, flags),
+    if (xform->kind == (COMPLEX_TO_REAL|REAL_TO_COMPLEX)) {
+      xform->backward = CHOICE(rfftwnd_create_plan(rank, n,
+                                                   FFTW_BACKWARD, flags),
                                fftw_plan_dft_c2r(rank, n, inp, out, flags));
-    } else {
-      xform->backward = CHOICE(fftwnd_create_plan(rank, n, FFTW_BACKWARD, flags),
-                               fftw_plan_dft(rank, n, inp, out, FFTW_BACKWARD, flags));
+    } else if (xform->kind == COMPLEX_TO_COMPLEX) {
+      xform->backward = CHOICE(fftwnd_create_plan(rank, n,
+                                                  FFTW_BACKWARD, flags),
+                               fftw_plan_dft(rank, n, inp, out,
+                                             FFTW_BACKWARD, flags));
+    } else /* REAL_TO_REAL */ {
+#ifdef FFTW3
+      fftw_r2r_kind kinds[Y_DIMSIZE-1];
+      for (j = 0; j < rank; ++j) {
+        kinds[j] = xform_backward_kind(xform->kinds[rank - j]);
+      }
+      xform->backward = fftw_plan_r2r(rank, n, inp, out, kinds, flags);
+#else
+      y_error("backward real-real transform not yet implemented");
+#endif
     }
     if (xform->backward == NULL) {
       y_error("failed to allocate FFTW plan for backward transform");
@@ -946,8 +1171,8 @@ static void create_plan(xform_t *xform, int forward)
  *
  *    setup_dimlist(xform, dims, forward);
  *
- * with XFORM = FFT object, DIMS = on entry (on return), dimension list of input
- * (output) array, FORWARD = true for forward transform.
+ * with XFORM = FFT object, DIMS = on entry (on return), dimension list of
+ * input (output) array, FORWARD = true for forward transform.
  *
  * This private function perform several tasks:
  *
@@ -961,14 +1186,14 @@ static void create_plan(xform_t *xform, int forward)
  */
 static void setup_dimlist(xform_t *xform, long dims[], int forward)
 {
-  long j, ndims, r_dim1, z_dim1, *xform_dims, r_size, z_size;
+  long j, ndims, *xform_dims, r_size;
 
   xform_dims = xform->dims;
 
   if (xform_dims[0] < 0L) {
-    /* Dimension list never specified. */
-    if (! forward && xform->real) {
-      y_error("cannot guess real-complex dimension list " \
+    /* Dimension list has never been specified before. */
+    if (! forward && xform->kind == (COMPLEX_TO_REAL|REAL_TO_COMPLEX)) {
+      y_error("cannot guess real-complex dimension list "       \
               "from backward transform");
     }
     ndims = dims[0];
@@ -981,17 +1206,36 @@ static void setup_dimlist(xform_t *xform, long dims[], int forward)
       xform_dims[j] = dims[j];
       r_size *= dims[j];
     }
-    if (ndims >= 1L && xform->real) {
-      r_dim1 = dims[1];
-      z_dim1 = r_dim1/2L + 1L;
-      z_size = 2L*(r_size/r_dim1)*z_dim1;
+    if (ndims >= 1L && xform->kind == (COMPLEX_TO_REAL|REAL_TO_COMPLEX)) {
+      long r_dim1 = dims[1];
+      long z_dim1 = r_dim1/2L + 1L;
       dims[1] = z_dim1;
-    } else {
-      z_size = 2L*r_size;
+      xform->z_size = 2L*(r_size/r_dim1)*z_dim1;
+      xform->r_size = r_size;
+      xform->scale = 1.0/r_size;
+    } else if (xform->kind == COMPLEX_TO_COMPLEX) {
+      xform->z_size = 2L*r_size;
+      xform->r_size = r_size;
+      xform->scale = 1.0/r_size;
+    } else /* REAL_TO_REAL */ {
+      long n = 1L;
+      if (xform->kinds[0] == 0) {
+        /* Apply the same transform along all dimensions. */
+        xform->kinds[0] = ndims;
+        for (j = 2; j <= ndims; ++j) {
+          xform->kinds[j] = xform->kinds[1];
+        }
+      } else if (xform->kinds[0] != ndims) {
+        y_error("number of dimensions is not equal to number of chosen "
+                "real-real transforms");
+      }
+      for (j = 1; j <= ndims; ++j) {
+        n *= xform_logical_size(xform->kinds[j], xform->dims[j]);
+      }
+      xform->z_size = r_size;
+      xform->r_size = r_size;
+      xform->scale = 1.0/n;
     }
-    xform->scale = 1.0/r_size;
-    xform->z_size = z_size;
-    xform->r_size = r_size;
     return;
   }
 
@@ -1001,10 +1245,10 @@ static void setup_dimlist(xform_t *xform, long dims[], int forward)
     goto mismatch;
   }
   if (ndims >= 1L) {
-    if (xform->real) {
+    if (xform->kind == (COMPLEX_TO_REAL|REAL_TO_COMPLEX)) {
       /* Real-complex transform: do something special with the first
 	 dimension. */
-      z_dim1 = xform_dims[1]/2L + 1L;
+      long z_dim1 = xform_dims[1]/2L + 1L;
       if (forward) {
 	if (dims[1] != xform_dims[1]) {
 	  goto mismatch;
@@ -1018,8 +1262,8 @@ static void setup_dimlist(xform_t *xform, long dims[], int forward)
       }
       j = 1L;
     } else {
-      /* Complex-complex transform: nothing special with the first
-	 dimension. */
+      /* Complex-complex and real-real transforms: nothing special with the
+	 first dimension. */
       j = 0L;
     }
     while (++j <= ndims) {
@@ -1041,6 +1285,7 @@ static void initialize(void)
     align_index = yget_global("align", 0);
     dims_index = yget_global("dims", 0);
     impl_index = yget_global("impl", 0);
+    kind_index = yget_global("kind", 0);
     nevals_index = yget_global("nevals", 0);
     nthreads_index = yget_global("nthreads", 0);
     planning_index = yget_global("planning", 0);
@@ -1066,7 +1311,8 @@ static void XFFT_BUILTIN(new)(int argc)
 {
   xform_t *xform;
   long index, planning, *dims, dimlist[Y_DIMSIZE];
-  int iarg, id, flag, j, real, align, nthreads;
+  int iarg, id, flag, j, kind, real, align, nthreads, nkinds;
+  int *kinds;
 
   /* Setup internals. */
   if (first_time) {
@@ -1082,6 +1328,8 @@ static void XFFT_BUILTIN(new)(int argc)
   nthreads = 1;
   align = FALSE;
   dims = NULL;
+  kinds = NULL;
+  nkinds = 0;
   if (argc % 2 == 1) {
     if (argc != 1 || ! yarg_nil(0)) {
       goto expectingKeywords;
@@ -1104,10 +1352,40 @@ static void XFFT_BUILTIN(new)(int argc)
       } else if (index == real_index) {
 	id = yarg_typeid(--iarg);
 	if (IS_INTEGER(id)) {
-	  real = (ygets_l(iarg) != 0L ? TRUE : FALSE);
+          real = (ygets_l(iarg) != 0L ? TRUE : FALSE);
 	} else if (id != Y_VOID) {
 	  y_error("bad value for REAL keyword");
 	}
+      } else if (index == kind_index) {
+	id = yarg_typeid(--iarg);
+        if (id != Y_VOID) {
+          if (IS_INTEGER(id)) {
+            kinds = ygeta_i(iarg, NULL, dimlist);
+            if (dimlist[0] == 0) {
+              /* Same R2R transform along all dimensions. */
+              nkinds = 0;
+              if (! XFFT_IS_R2R(kinds[0])) {
+                kinds = NULL;
+              }
+            } else if (dimlist[0] == 1) {
+              if (dimlist[1] >= Y_DIMSIZE) {
+                y_error("too many values for KIND keyword");
+              }
+              nkinds = dimlist[1];
+              for (j = 0; j < nkinds; ++j) {
+                if (! XFFT_IS_R2R(kinds[j])) {
+                  kinds = NULL;
+                  break;
+                }
+              }
+            } else {
+              kinds = NULL;
+            }
+          }
+          if (kinds == NULL) {
+            y_error("bad value for KIND keyword");
+          }
+        }
       } else if (index == nthreads_index) {
 	id = yarg_typeid(--iarg);
 	if (IS_INTEGER(id)) {
@@ -1175,6 +1453,21 @@ static void XFFT_BUILTIN(new)(int argc)
 #ifndef USE_THREADS
   nthreads = 1;
 #endif
+  if (real) {
+    if (kinds != NULL) {
+      y_error("keywords KIND and REAL are not compatible");
+    }
+    kind = (COMPLEX_TO_REAL|REAL_TO_COMPLEX);
+  } else if (kinds != NULL) {
+    kind = REAL_TO_REAL;
+  } else {
+    kind = COMPLEX_TO_COMPLEX;
+  }
+  if (dims != NULL && kinds != NULL) {
+    if (nkinds != 0 && nkinds != dims[0]) {
+      y_error("incompatible number of dimensions for keywords KIND and DIMS");
+    }
+  }
 
   /* Create FFTW object and setup dimension list. */
   xform = (xform_t *)ypush_obj(yfunc_obj(&xform_class), sizeof(xform_t));
@@ -1188,8 +1481,21 @@ static void XFFT_BUILTIN(new)(int argc)
   xform->ws = NULL;
   xform->nthreads = nthreads;
   xform->planning = planning;
-  xform->real = real;
+  xform->kind = kind;
   xform->align = align;
+  xform->kinds[0] = nkinds;
+  for (j = 1; j < Y_DIMSIZE; ++j) {
+    xform->kinds[j] = XFFT_FFT;
+  }
+  if (kinds != NULL) {
+    if (nkinds == 0) {
+      xform->kinds[1] = kinds[0];
+    } else {
+      for (j = 1; j <= nkinds; ++j) {
+        xform->kinds[j] = kinds[j-1];
+      }
+    }
+  }
   if (dims != NULL) {
     setup_dimlist(xform, dims, 1);
   }

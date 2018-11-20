@@ -26,6 +26,10 @@
 local XFFT_DIRECT, XFFT_FORWARD, XFFT_CONJUGATE_TRANSPOSE, XFFT_BACKWARD;
 local XFFT_INVERSE, XFFT_INVERSE_CONJUGATE_TRANSPOSE;
 local XFFT_ESTIMATE, XFFT_MEASURE, XFFT_PATIENT, XFFT_EXHAUSTIVE;
+local XFFT_R2HC, XFFT_HC2R, XFFT_DHT, XFFT_REDFT00, XFFT_REDFT01, XFFT_REDFT10;
+local XFFT_REDFT11, XFFT_RODFT00, XFFT_RODFT01, XFFT_RODFT10, XFFT_RODFT11;
+local XFFT_DCT_I, XFFT_DCT_II, XFFT_DCT_III, XFFT_DCT_IV;
+local XFFT_DST_I, XFFT_DST_II, XFFT_DST_III, XFFT_DST_IV;
 local xfft_new;
 /* DOCUMENT op = xfft_new(...);
 
@@ -72,7 +76,30 @@ local xfft_new;
      the dimension list and this keyword muts be used.
 
      Keyword REAL must be set true to create an operator for real-complex
-     transforms.
+     FFT transforms.
+
+     Keyword KIND can be set with the identifier(s) of the real-real
+     transform(s) to apply.  The value can be a scalar (to apply the same
+     transform along all dimensions) or a vector of identifiers (one for each
+     dimension).  Identifiers are (DFT = Discrete Fourier Transform, DCT =
+     Discrete Cosine Transform, DST = Discrete Sine Transform):
+
+        ------------------------------------------------------------------
+        Identifier     Transform
+        ------------------------------------------------------------------
+        XFFT_R2HC                      forward DFT in half-complex format
+        XFFT_HC2R                      backward DFT in half-complex format
+        XFFT_DHT                       discrete Hartley transform
+        XFFT_DCT_I   or XFFT_REDFT00   DCT-I
+        XFFT_DCT_II  or XFFT_REDFT10   DCT-II
+        XFFT_DCT_III or XFFT_REDFT01   DCT-III
+        XFFT_DCT_IV  or XFFT_REDFT11   DCT-IV
+        XFFT_DST_I   or XFFT_RODFT00   DST-I
+        XFFT_DST_II  or XFFT_RODFT10   DST-II
+        XFFT_DST_III or XFFT_RODFT01   DST-III
+        XFFT_DST_IV  or XFFT_RODFT11   DST-IV
+        ------------------------------------------------------------------
+
 
      Keyword NTHREADS can be set to specify the number of threads to use.  If
      multi-threading is not supported --- you can check this with
@@ -103,7 +130,27 @@ XFFT_EXHAUSTIVE = 3;
 XFFT_FORWARD = XFFT_DIRECT = 0;
 XFFT_BACKWARD = XFFT_ADJOINT = XFFT_CONJUGATE_TRANSPOSE = 1;
 XFFT_INVERSE = 2;
-XFFT_INVERSE_ADJOINT = XFFT_ADJOINT_INVERSE = XFFT_INVERSE_CONJUGATE_TRANSPOSE = 3;
+XFFT_INVERSE_ADJOINT = XFFT_ADJOINT_INVERSE = 3;
+XFFT_INVERSE_CONJUGATE_TRANSPOSE = XFFT_INVERSE_ADJOINT;
+XFFT_R2HC    =  0n;
+XFFT_HC2R    =  1n;
+XFFT_DHT     =  2n;
+XFFT_REDFT00 =  3n;
+XFFT_REDFT01 =  4n;
+XFFT_REDFT10 =  5n;
+XFFT_REDFT11 =  6n;
+XFFT_RODFT00 =  7n;
+XFFT_RODFT01 =  8n;
+XFFT_RODFT10 =  9n;
+XFFT_RODFT11 = 10n;
+XFFT_DCT_I   = XFFT_REDFT00;
+XFFT_DCT_II  = XFFT_REDFT10;
+XFFT_DCT_III = XFFT_REDFT01;
+XFFT_DCT_IV  = XFFT_REDFT11;
+XFFT_DST_I   = XFFT_RODFT00;
+XFFT_DST_II  = XFFT_RODFT10;
+XFFT_DST_III = XFFT_RODFT01;
+XFFT_DST_IV  = XFFT_RODFT11;
 
 func xfft_info(..)
 /* DOCUMENT xfft_info;

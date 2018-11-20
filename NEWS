@@ -1,3 +1,7 @@
+ * [2018/11/20]
+   - real-real transforms of FFTW3 are implemented (Hartley transform, discrete
+     cosine/sine transforms, ...);
+
  * [2015/06/19] version 0.1.0 released.
    - add pseudo-configure script;
    - plug-in can now be compiled from a remote build directory;
