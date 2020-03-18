@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 
 # Current version (a final 'x' indicates a development version)
-VERSION = 0.1.0
+VERSION = 0.2.0
 
 #---- BEGIN OF CUSTOMIZABLE PART ----------------------------------------------
 # Edit this part for customization.
