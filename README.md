@@ -5,7 +5,7 @@ Description
 -----------
 
 **XFFT** (for *eXtended Fast Fourier Transform*) is a
-[Yorick](http://yorick.github.com/) extension to uniformely interface
+[Yorick](http://github.com/LLNL/yorick/) extension to uniformely interface
 between various implementations of FFT (notably
 [FFTW](http://www.fftw.org), the Fastest Fourier Transform in the West,
 and, in the future, CFFT based on Swarztrauber routines) and benefit from
@@ -50,7 +50,7 @@ in your code.
 More detailled installation explanations are given below.
 
 
-0. You must have [Yorick](http://yorick.github.com/) installed on your
+0. You must have [Yorick](http://github.com/LLNL/yorick/) installed on your
    machine and the various FFT libraries.
 
 1. Unpack the plug-in code somewhere.
